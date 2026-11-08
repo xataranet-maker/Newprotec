@@ -107,38 +107,43 @@ export function App() {
   const [language, setLanguage] = useState<Language>(() => loadFromStorage('app_lang', 'vi'));
   const [deptTargets, setDeptTargets] = useState<Record<string, number>>(() => loadFromStorage('app_dept_targets', { 'Multi Auto': 500 }));
 
-  // --- STATES (MULTI AUTO & COMMON) ---
-  const [importedRecords, setImportedRecords] = useState<ImportRecord[]>([]);
-  const [exportedRecords, setExportedRecords] = useState<ExportRecord[]>([]);
-  const [accessoriesRecords, setAccessoriesRecords] = useState<AccessoryRecord[]>([]);
-  const [accessoriesUsage, setAccessoriesUsage] = useState<AccessoryUsageRecord[]>([]);
-  const [netDataRecords, setNetDataRecords] = useState<NetDataRecord[]>([]);
-  const [accessoryParams, setAccessoryParams] = useState<AccessoryParameter[]>([]);
-  const [machineStatuses, setMachineStatuses] = useState<MachineSetup[]>(generateMachines("Multi"));
-  const [staffRecords, setStaffRecords] = useState<StaffRecord[]>([]);
-  const [multiHistory, setMultiHistory] = useState<ProductionHistoryRecord[]>([]);
-  const [machineActivityLogs, setMachineActivityLogs] = useState<MachineActivityLog[]>([]);
-  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
-  const [attendanceConfirmations, setAttendanceConfirmations] = useState<AttendanceConfirmationRecord[]>([]);
-  
-  const [qualityStaff, setQualityStaff] = useState<StaffRecord[]>([]);
-  const [hrStaff, setHrStaff] = useState<StaffRecord[]>([]);
-  const [warehouseStaff, setWarehouseStaff] = useState<StaffRecord[]>([]);
-  const [officeStaff, setOfficeStaff] = useState<StaffRecord[]>([]);
+  // --- INITIAL DATA HYDRATION FROM STORAGE (V2 or V1) ---
+  const initialData = useMemo(() => {
+    return loadFromStorage('newprotec_v2_full_state', null) || loadFromStorage('newprotec_full_state', null) || {};
+  }, []);
 
-  const [contracts, setContracts] = useState<ContractRecord[]>([]);
-  const [overtimeRecords, setOvertimeRecords] = useState<OvertimeRecord[]>([]);
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
-  const [salarySlipRecords, setSalarySlipRecords] = useState<SalarySlipRecord[]>([]);
-  const [timekeepingRecords, setTimekeepingRecords] = useState<TimekeepingRecord[]>([]);
-  const [announcements, setAnnouncements] = useState<HRAnnouncement[]>([]);
-  const [hrAssets, setHrAssets] = useState<AssetRecord[]>([]);
-  const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>([]);
-  const [documentRecords, setDocumentRecords] = useState<DocumentRecord[]>([]);
-  const [attendanceRequests, setAttendanceRequests] = useState<AttendanceCorrectionRequest[]>([]);
-  const [productReturns, setProductReturns] = useState<any[]>([]);
-  const [accessoryReturns, setAccessoryReturns] = useState<any[]>([]);
-  const [productionPlans, setProductionPlans] = useState<any[]>([]);
+  // --- STATES (MULTI AUTO & COMMON) ---
+  const [importedRecords, setImportedRecords] = useState<ImportRecord[]>(() => initialData.importedRecords || initialData.importData || initialData.multiImportData || initialData.imports || []);
+  const [exportedRecords, setExportedRecords] = useState<ExportRecord[]>(() => initialData.exportedRecords || initialData.exportData || initialData.multiExportData || initialData.exports || []);
+  const [accessoriesRecords, setAccessoriesRecords] = useState<AccessoryRecord[]>(() => initialData.accessoriesRecords || initialData.accessoriesData || initialData.accessoryData || initialData.multiAccessories || []);
+  const [accessoriesUsage, setAccessoriesUsage] = useState<AccessoryUsageRecord[]>(() => initialData.accessoriesUsage || initialData.accessoryUsage || []);
+  const [netDataRecords, setNetDataRecords] = useState<NetDataRecord[]>(() => initialData.netDataRecords || initialData.netData || initialData.multiNetData || []);
+  const [accessoryParams, setAccessoryParams] = useState<AccessoryParameter[]>(() => initialData.accessoryParams || initialData.accParams || []);
+  const [machineStatuses, setMachineStatuses] = useState<MachineSetup[]>(() => initialData.machineStatuses || initialData.machineData || initialData.machines || initialData.multiMachines || generateMachines("Multi"));
+  const [staffRecords, setStaffRecords] = useState<StaffRecord[]>(() => initialData.staffRecords || initialData.staffData || initialData.staff || initialData.multiStaff || []);
+  const [multiHistory, setMultiHistory] = useState<ProductionHistoryRecord[]>(() => initialData.multiHistory || initialData.historyData || initialData.history || []);
+  const [machineActivityLogs, setMachineActivityLogs] = useState<MachineActivityLog[]>(() => initialData.machineActivityLogs || initialData.activityLogs || initialData.logs || []);
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>(() => initialData.attendanceHistory || initialData.attendanceData || initialData.attendance || []);
+  const [attendanceConfirmations, setAttendanceConfirmations] = useState<AttendanceConfirmationRecord[]>(() => initialData.attendanceConfirmations || initialData.attConfirmations || []);
+  
+  const [qualityStaff, setQualityStaff] = useState<StaffRecord[]>(() => initialData.qualityStaff || []);
+  const [hrStaff, setHrStaff] = useState<StaffRecord[]>(() => initialData.hrStaff || []);
+  const [warehouseStaff, setWarehouseStaff] = useState<StaffRecord[]>(() => initialData.warehouseStaff || []);
+  const [officeStaff, setOfficeStaff] = useState<StaffRecord[]>(() => initialData.officeStaff || []);
+
+  const [contracts, setContracts] = useState<ContractRecord[]>(() => initialData.contracts || initialData.hrContracts || []);
+  const [overtimeRecords, setOvertimeRecords] = useState<OvertimeRecord[]>(() => initialData.overtimeRecords || initialData.hrOvertime || []);
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => initialData.payrollRecords || initialData.hrPayroll || initialData.payrolls || []);
+  const [salarySlipRecords, setSalarySlipRecords] = useState<SalarySlipRecord[]>(() => initialData.salarySlipRecords || initialData.hrSalarySlips || initialData.salarySlips || []);
+  const [timekeepingRecords, setTimekeepingRecords] = useState<TimekeepingRecord[]>(() => initialData.timekeepingRecords || initialData.timekeeping || initialData.hrTimekeeping || []);
+  const [announcements, setAnnouncements] = useState<HRAnnouncement[]>(() => initialData.announcements || initialData.hrAnnouncements || []);
+  const [hrAssets, setHrAssets] = useState<AssetRecord[]>(() => initialData.hrAssets || initialData.assets || []);
+  const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>(() => initialData.trainingRecords || initialData.hrTraining || []);
+  const [documentRecords, setDocumentRecords] = useState<DocumentRecord[]>(() => initialData.documentRecords || initialData.hrDocuments || []);
+  const [attendanceRequests, setAttendanceRequests] = useState<AttendanceCorrectionRequest[]>(() => initialData.attendanceRequests || initialData.attRequests || []);
+  const [productReturns, setProductReturns] = useState<any[]>(() => initialData.productReturns || initialData.returns || []);
+  const [accessoryReturns, setAccessoryReturns] = useState<any[]>(() => initialData.accessoryReturns || initialData.accReturns || []);
+  const [productionPlans, setProductionPlans] = useState<any[]>(() => initialData.productionPlans || initialData.plans || []);
 
   // --- DERIVATIONS ---
   const allStaff = useMemo(() => [
@@ -165,45 +170,108 @@ export function App() {
       return null;
   }, [currentTab, activeItem]);
 
-  // --- STATE APPLICATION HELPER ---
-  const applyState = useCallback((s: any) => {
+  // --- STATE APPLICATION HELPER WITH BACKWARD COMPATIBILITY ---
+  const applyState = useCallback((raw: any) => {
+    let s = raw;
+    if (typeof s === 'string') {
+      try {
+        s = JSON.parse(s);
+      } catch (e) {
+        console.error("applyState JSON parse error:", e);
+        return;
+      }
+    }
     if (!s || typeof s !== 'object') return;
-    if (s.userAccounts && Array.isArray(s.userAccounts) && s.userAccounts.length > 0) {
+
+    const users = s.userAccounts || s.users;
+    if (users && Array.isArray(users) && users.length > 0) {
         const combined = [...DEFAULT_ADMINS];
-        s.userAccounts.forEach((acc: UserAccount) => {
+        users.forEach((acc: UserAccount) => {
             if (!combined.some(c => c.username.toLowerCase() === acc.username.toLowerCase())) combined.push(acc);
         });
         setUserAccounts(combined);
     }
-    if (s.importedRecords) setImportedRecords(s.importedRecords);
-    if (s.exportedRecords) setExportedRecords(s.exportedRecords);
-    if (s.accessoriesRecords) setAccessoriesRecords(s.accessoriesRecords);
-    if (s.accessoriesUsage) setAccessoriesUsage(s.accessoriesUsage);
-    if (s.netDataRecords) setNetDataRecords(s.netDataRecords);
-    if (s.accessoryParams) setAccessoryParams(s.accessoryParams);
-    if (s.machineStatuses) setMachineStatuses(s.machineStatuses);
-    if (s.staffRecords) setStaffRecords(s.staffRecords);
-    if (s.multiHistory) setMultiHistory(s.multiHistory);
-    if (s.machineActivityLogs) setMachineActivityLogs(s.machineActivityLogs);
-    if (s.attendanceHistory) setAttendanceHistory(s.attendanceHistory);
-    if (s.attendanceConfirmations) setAttendanceConfirmations(s.attendanceConfirmations);
-    if (s.qualityStaff) setQualityStaff(s.qualityStaff);
-    if (s.hrStaff) setHrStaff(s.hrStaff);
-    if (s.warehouseStaff) setWarehouseStaff(s.warehouseStaff);
-    if (s.officeStaff) setOfficeStaff(s.officeStaff);
-    if (s.contracts) setContracts(s.contracts);
-    if (s.overtimeRecords) setOvertimeRecords(s.overtimeRecords);
-    if (s.payrollRecords) setPayrollRecords(s.payrollRecords);
-    if (s.salarySlipRecords) setSalarySlipRecords(s.salarySlipRecords);
-    if (s.timekeepingRecords) setTimekeepingRecords(s.timekeepingRecords);
-    if (s.announcements) setAnnouncements(s.announcements);
-    if (s.hrAssets) setHrAssets(s.hrAssets);
-    if (s.trainingRecords) setTrainingRecords(s.trainingRecords);
-    if (s.documentRecords) setDocumentRecords(s.documentRecords);
-    if (s.attendanceRequests) setAttendanceRequests(s.attendanceRequests);
-    if (s.productReturns) setProductReturns(s.productReturns);
-    if (s.accessoryReturns) setAccessoryReturns(s.accessoryReturns);
-    if (s.productionPlans) setProductionPlans(s.productionPlans);
+
+    const imported = s.importedRecords || s.importData || s.multiImportData || s.imports;
+    if (imported && Array.isArray(imported)) setImportedRecords(imported);
+
+    const exported = s.exportedRecords || s.exportData || s.multiExportData || s.exports;
+    if (exported && Array.isArray(exported)) setExportedRecords(exported);
+
+    const accessories = s.accessoriesRecords || s.accessoriesData || s.accessoryData || s.multiAccessories;
+    if (accessories && Array.isArray(accessories)) setAccessoriesRecords(accessories);
+
+    const accUsage = s.accessoriesUsage || s.accessoryUsage;
+    if (accUsage && Array.isArray(accUsage)) setAccessoriesUsage(accUsage);
+
+    const netData = s.netDataRecords || s.netData || s.multiNetData;
+    if (netData && Array.isArray(netData)) setNetDataRecords(netData);
+
+    const params = s.accessoryParams || s.accParams;
+    if (params && Array.isArray(params)) setAccessoryParams(params);
+
+    const machines = s.machineStatuses || s.machineData || s.machines || s.multiMachines;
+    if (machines && Array.isArray(machines)) setMachineStatuses(machines);
+
+    const staff = s.staffRecords || s.staffData || s.staff || s.multiStaff;
+    if (staff && Array.isArray(staff)) setStaffRecords(staff);
+
+    const history = s.multiHistory || s.historyData || s.history;
+    if (history && Array.isArray(history)) setMultiHistory(history);
+
+    const logs = s.machineActivityLogs || s.activityLogs || s.logs;
+    if (logs && Array.isArray(logs)) setMachineActivityLogs(logs);
+
+    const attHistory = s.attendanceHistory || s.attendanceData || s.attendance;
+    if (attHistory && Array.isArray(attHistory)) setAttendanceHistory(attHistory);
+
+    const attConf = s.attendanceConfirmations || s.attConfirmations;
+    if (attConf && Array.isArray(attConf)) setAttendanceConfirmations(attConf);
+
+    if (s.qualityStaff && Array.isArray(s.qualityStaff)) setQualityStaff(s.qualityStaff);
+    if (s.hrStaff && Array.isArray(s.hrStaff)) setHrStaff(s.hrStaff);
+    if (s.warehouseStaff && Array.isArray(s.warehouseStaff)) setWarehouseStaff(s.warehouseStaff);
+    if (s.officeStaff && Array.isArray(s.officeStaff)) setOfficeStaff(s.officeStaff);
+
+    const contractsList = s.contracts || s.hrContracts;
+    if (contractsList && Array.isArray(contractsList)) setContracts(contractsList);
+
+    const otList = s.overtimeRecords || s.hrOvertime;
+    if (otList && Array.isArray(otList)) setOvertimeRecords(otList);
+
+    const payrollList = s.payrollRecords || s.hrPayroll || s.payrolls;
+    if (payrollList && Array.isArray(payrollList)) setPayrollRecords(payrollList);
+
+    const salaryList = s.salarySlipRecords || s.hrSalarySlips || s.salarySlips;
+    if (salaryList && Array.isArray(salaryList)) setSalarySlipRecords(salaryList);
+
+    const tkList = s.timekeepingRecords || s.timekeeping || s.hrTimekeeping;
+    if (tkList && Array.isArray(tkList)) setTimekeepingRecords(tkList);
+
+    const annList = s.announcements || s.hrAnnouncements;
+    if (annList && Array.isArray(annList)) setAnnouncements(annList);
+
+    const assetsList = s.hrAssets || s.assets;
+    if (assetsList && Array.isArray(assetsList)) setHrAssets(assetsList);
+
+    const trainingList = s.trainingRecords || s.hrTraining;
+    if (trainingList && Array.isArray(trainingList)) setTrainingRecords(trainingList);
+
+    const docsList = s.documentRecords || s.hrDocuments;
+    if (docsList && Array.isArray(docsList)) setDocumentRecords(docsList);
+
+    const reqList = s.attendanceRequests || s.attRequests;
+    if (reqList && Array.isArray(reqList)) setAttendanceRequests(reqList);
+
+    const prodReturns = s.productReturns || s.returns;
+    if (prodReturns && Array.isArray(prodReturns)) setProductReturns(prodReturns);
+
+    const accReturns = s.accessoryReturns || s.accReturns;
+    if (accReturns && Array.isArray(accReturns)) setAccessoryReturns(accReturns);
+
+    const plans = s.productionPlans || s.plans;
+    if (plans && Array.isArray(plans)) setProductionPlans(plans);
+
     if (s.deptTargets) setDeptTargets(s.deptTargets);
     if (s.language) setLanguage(s.language);
   }, []);
@@ -226,6 +294,7 @@ export function App() {
         if (isPush) {
             try {
                 localStorage.setItem('newprotec_v2_full_state', JSON.stringify(state));
+                localStorage.setItem('newprotec_full_state', JSON.stringify(state));
             } catch (storageErr) {
                 console.warn('LocalStorage save error:', storageErr);
             }
@@ -255,20 +324,33 @@ export function App() {
             console.warn("Sync fetch warning (using local store):", fetchErr);
         }
 
-        if (result && result.success) {
-            if (!isPush && result.data) {
+        if (!isPush) {
+            if (result && result.success && result.data && Object.keys(result.data).length > 0) {
                 applyState(result.data);
                 try {
                     localStorage.setItem('newprotec_v2_full_state', JSON.stringify(result.data));
+                    localStorage.setItem('newprotec_full_state', JSON.stringify(result.data));
                 } catch {}
+            } else {
+                // Fall back to local storage if remote data was null or empty
+                const savedLocal = loadFromStorage('newprotec_v2_full_state', null) || loadFromStorage('newprotec_full_state', null);
+                if (savedLocal) {
+                    applyState(savedLocal);
+                    // If remote database was empty, seed it with our local state
+                    if (result && result.success && (!result.data || Object.keys(result.data).length === 0)) {
+                        fetch(SYNC_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'PUSH', data: savedLocal })
+                        }).catch(() => {});
+                    }
+                }
             }
             setLastSyncTime(new Date().toLocaleTimeString('vi-VN'));
-        } else if (!isPush) {
-            const savedLocal = loadFromStorage('newprotec_v2_full_state', null) || loadFromStorage('newprotec_full_state', null);
-            if (savedLocal) {
-                applyState(savedLocal);
+        } else {
+            if (result && result.success) {
+                setLastSyncTime(new Date().toLocaleTimeString('vi-VN'));
             }
-            setLastSyncTime(new Date().toLocaleTimeString('vi-VN'));
         }
     } catch (e) {
         console.warn("Sync Error caught gracefully:", e);
