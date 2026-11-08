@@ -1,0 +1,35 @@
+
+{
+  "id": "newprotec-v2-production",
+  "short_name": "Newprotec",
+  "name": "NEWPROTEC System v2.0",
+  "description": "Hệ thống quản lý sản xuất tích hợp Newprotec",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/?mode=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "theme_color": "#020617",
+  "background_color": "#020617",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "business", "utilities"]
+}
