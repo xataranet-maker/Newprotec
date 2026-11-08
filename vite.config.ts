@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs';
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig, Plugin, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const syncApiPlugin = (): Plugin => {
+const syncApiPlugin = (env: Record<string, string>): Plugin => {
   const dataDir = path.resolve(__dirname, 'data');
   const storeFile = path.resolve(dataDir, 'local_sync.json');
 
@@ -30,6 +30,10 @@ const syncApiPlugin = (): Plugin => {
     }
   };
 
+  const getEnv = (name: string): string | undefined => {
+    return env[name] || process.env[name];
+  };
+
   return {
     name: 'api-sync-handler',
     configureServer(server) {
@@ -46,11 +50,59 @@ const syncApiPlugin = (): Plugin => {
             return;
           }
 
+          const rawKvUrl = getEnv('KV_REST_API_URL') || 
+                           getEnv('UPSTASH_REDIS_REST_URL') || 
+                           getEnv('VITE_KV_REST_API_URL') || 
+                           getEnv('VITE_UPSTASH_REDIS_REST_URL') ||
+                           (getEnv('KV_URL')?.startsWith('https://') ? getEnv('KV_URL') : undefined);
+
+          const kvToken = getEnv('KV_REST_API_TOKEN') || 
+                          getEnv('UPSTASH_REDIS_REST_TOKEN') ||
+                          getEnv('VITE_KV_REST_API_TOKEN') ||
+                          getEnv('VITE_UPSTASH_REDIS_REST_TOKEN');
+
+          const isValidKvUrl = (url?: string): boolean => {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            return (trimmed.startsWith('https://') || trimmed.startsWith('http://')) && 
+                   !trimmed.includes('your-kv-instance') && 
+                   trimmed.length > 10;
+          };
+
+          let kvClient: any = null;
+          if (isValidKvUrl(rawKvUrl) && kvToken && kvToken.trim().length > 10) {
+            try {
+              const { createClient } = await import('@vercel/kv');
+              kvClient = createClient({ url: rawKvUrl!.trim(), token: kvToken.trim() });
+            } catch {
+              // Silently fallback to local store without polluting logs
+            }
+          }
+
+          const DB_KEY_V2 = 'newprotec_v2_full_state';
+          const DB_KEY_V1 = 'newprotec_full_state';
+          const LEGACY_KEYS = [DB_KEY_V2, DB_KEY_V1, 'newprotec_state', 'newprotec_data'];
+
           if (req.method === 'GET') {
-            const currentData = readStore();
+            let resultData: any = null;
+            if (kvClient) {
+              for (const k of LEGACY_KEYS) {
+                try {
+                  const val = await kvClient.get(k);
+                  if (val !== null && val !== undefined) {
+                    resultData = typeof val === 'string' ? JSON.parse(val) : val;
+                    break;
+                  }
+                } catch {}
+              }
+            }
+            if (!resultData) {
+              resultData = readStore();
+            }
+
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true, data: currentData }));
+            res.end(JSON.stringify({ success: true, data: resultData }));
             return;
           }
 
@@ -64,33 +116,15 @@ const syncApiPlugin = (): Plugin => {
                 const parsed = body ? JSON.parse(body) : {};
                 const { action, data } = parsed;
 
-                // Check for KV credentials if configured
-                const kvUrl = process.env.KV_REST_API_URL || 
-                              process.env.UPSTASH_REDIS_REST_URL || 
-                              process.env.KV_URL || 
-                              process.env.REDIS_URL;
-                const kvToken = process.env.KV_REST_API_TOKEN || 
-                                process.env.UPSTASH_REDIS_REST_TOKEN;
-
-                let kvClient: any = null;
-                if (kvUrl && kvToken) {
-                  try {
-                    const { createClient } = await import('@vercel/kv');
-                    kvClient = createClient({ url: kvUrl, token: kvToken });
-                  } catch (e) {
-                    console.warn('KV client init failed, using local storage:', e);
-                  }
-                }
-
-                const DB_KEY_V2 = 'newprotec_v2_full_state';
-                const DB_KEY_V1 = 'newprotec_full_state';
-
                 if (action === 'PUSH') {
                   if (data) {
                     writeStore(data);
                     if (kvClient) {
                       try {
-                        await kvClient.set(DB_KEY_V2, data);
+                        await Promise.allSettled([
+                          kvClient.set(DB_KEY_V2, data),
+                          kvClient.set(DB_KEY_V1, data),
+                        ]);
                       } catch (err) {
                         console.warn('KV push failed, kept local:', err);
                       }
@@ -105,16 +139,19 @@ const syncApiPlugin = (): Plugin => {
                 if (action === 'PULL') {
                   let resultData: any = null;
                   if (kvClient) {
-                    try {
-                      resultData = await kvClient.get(DB_KEY_V2);
-                      if (!resultData) {
-                        resultData = await kvClient.get(DB_KEY_V1);
-                        if (resultData) {
-                          await kvClient.set(DB_KEY_V2, resultData);
+                    for (const k of LEGACY_KEYS) {
+                      try {
+                        const val = await kvClient.get(k);
+                        if (val !== null && val !== undefined) {
+                          resultData = typeof val === 'string' ? JSON.parse(val) : val;
+                          if (k !== DB_KEY_V2) {
+                            await kvClient.set(DB_KEY_V2, resultData).catch(() => {});
+                          }
+                          break;
                         }
+                      } catch (err) {
+                        console.warn(`KV pull failed for ${k}:`, err);
                       }
-                    } catch (err) {
-                      console.warn('KV pull failed, using local store:', err);
                     }
                   }
 
@@ -130,12 +167,12 @@ const syncApiPlugin = (): Plugin => {
 
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Hành động không hợp lệ' }));
+                res.end(JSON.stringify({ success: false, error: 'Hành động không hợp lệ' }));
               } catch (e: any) {
                 console.error('Error handling /api/sync request:', e);
                 res.statusCode = 500;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Lỗi máy chủ', message: e?.message }));
+                res.end(JSON.stringify({ success: false, error: 'Lỗi máy chủ', message: e?.message }));
               }
             });
             return;
@@ -147,17 +184,19 @@ const syncApiPlugin = (): Plugin => {
   };
 };
 
-export default defineConfig(() => {
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react(), syncApiPlugin()],
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    server: {
+      port: 3000,
+      host: '0.0.0.0',
+    },
+    plugins: [react(), syncApiPlugin(env)],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
       }
-    };
+    }
+  };
 });
+
